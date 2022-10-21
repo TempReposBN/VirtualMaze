@@ -53,9 +53,9 @@ public class BinWallManager {
         ReconfigureGazeOffsetCache(Default_Radius, Default_Density); //radius of 50 pixels, density of approx 1 raycast per 45 pixels
     }
 
-    public static void DisplayGazes(List<Vector2> gazes, Camera c, GameObject binWallPrefab, BinMapper mapper) {
-        IdentifyObjects(gazes, c, binWallPrefab, mapper);
-        ViewBinGazes(gazes, c, binWallPrefab, mapper);
+    public static void DisplayGazes(List<Vector2> gazes, Camera c, GameObject binWallPrefab) {
+        IdentifyObjects(gazes, c, binWallPrefab);
+        ViewBinGazes(gazes, c, binWallPrefab);
         gazes.Clear();
     }
 
@@ -125,11 +125,13 @@ public class BinWallManager {
             results.Dispose();
         }
 
-        public void process(BinMapper mapper, HashSet<int> binsHitId) {
+        public void process(HashSet<int> binsHitId) {
+            //List<Bin> binList = binWall.binList;
             for (int i = 0; i < numRaycasts; i++) {
                 Profiler.BeginSample("GetCollider");
                 Collider c = results[i].collider;
                 Profiler.EndSample();
+
                 if (c != null) {
                     Profiler.BeginSample("GetComponent");
                     Bin b = c.GetComponent<Bin>();
@@ -138,14 +140,22 @@ public class BinWallManager {
                     Profiler.BeginSample("HIT");
                     b.Hit();
                     Profiler.EndSample();
+                    
+                    // int mappedId = mapper.MapBinToId(b.parent, b);
+                    //int mappedId = binList[binList.IndexOf(b)].id;
+                    if (b.transform.parent.gameObject.GetComponent<BinWall>())
+                    {
+                        Profiler.BeginSample("Mapper");
+                        List<Bin> binList = b.transform.parent.gameObject.GetComponent<BinWall>().binList;
+                        int mappedId = binList[binList.IndexOf(b)].id;
+                        //Debug.Log($"map id:{mappedId}");
+                        Profiler.EndSample();
 
-                    Profiler.BeginSample("Mapper");
-                    int mappedId = mapper.MapBinToId(b.parent, b);
-                    Profiler.EndSample();
-
-                    if (binsHitId.Add(mappedId)) {
-                        b.idText.text = mappedId.ToString();
+                        if (binsHitId.Add(mappedId)) {
+                            b.idText.text = mappedId.ToString();
+                        }
                     }
+                    
                 }
             }
         }
@@ -154,8 +164,9 @@ public class BinWallManager {
     static Color transparentRed = new Color(1, 0, 0, 0.3f);
     static Color transGreen = new Color(0, 1, 0, 0.3f);
 
-    public static void ViewBinGazes(IEnumerable<Vector2> gazes, Camera cam, GameObject binWallPrefab, BinMapper mapper) {
+    public static void ViewBinGazes(IEnumerable<Vector2> gazes, Camera cam, GameObject binWallPrefab) {
         int numRaycasts = secondaryOffset.Count;
+        //List<Bin> binList = binWall.binList;
 
         NativeArray<RaycastCommand> commands = new NativeArray<RaycastCommand>(numRaycasts, Allocator.TempJob);
         NativeArray<RaycastHit> results = new NativeArray<RaycastHit>(numRaycasts, Allocator.TempJob);
@@ -191,7 +202,10 @@ public class BinWallManager {
                         Bin b = c.GetComponent<Bin>();
                         b.Hit();
 
-                        b.idText.text = mapper.MapBinToId(b.parent, b).ToString();
+                        List<Bin> binList = b.transform.parent.gameObject.GetComponent<BinWall>().binList;
+                        b.idText.text = binList[binList.IndexOf(b)].id.ToString();
+                        Debug.Log($"bin id:{b.idText.text}");
+                        // b.idText.text = mapper.MapBinToId(b.parent, b).ToString();
                         b.SetTextCanvasActive(true);
                     }
                 }
@@ -203,7 +217,7 @@ public class BinWallManager {
         }
     }
 
-    public static float IdentifyObjects(List<Vector2> gazes, Camera cam, GameObject binWallPrefab, BinMapper mapper) {
+    public static float IdentifyObjects(List<Vector2> gazes, Camera cam, GameObject binWallPrefab) {
         int numRaycasts = gazes.Count * primaryOffset.Count;
 
         NativeArray<RaycastCommand> commands = new NativeArray<RaycastCommand>(numRaycasts, Allocator.TempJob);
@@ -236,7 +250,7 @@ public class BinWallManager {
                 if (c != null) {
                     maxSqDist = Mathf.Max(maxSqDist, Vector3.SqrMagnitude(results[i].point - commands[i].from));
                     hitPool.Add(c);
-                    Debug.DrawLine(commands[i].from, results[i].point, transGreen);
+                    Debug.DrawLine(commands[i].from, results[i].point, transparentRed);
                 }
             }
         }
@@ -244,9 +258,9 @@ public class BinWallManager {
             commands.Dispose();
             results.Dispose();
         }
-        foreach (Collider c in hitPool) {
-            AssignBinwall(c.gameObject, binWallPrefab, mapper);
-        }
+        // foreach (Collider c in hitPool) {
+        //     AssignBinwall(c.gameObject, binWallPrefab, mapper);
+        // }
 
         return maxSqDist;
     }
@@ -328,7 +342,10 @@ public class BinWallManager {
     }
 
     private static BinWall GetAvailableBinWall(int group, GameObject binWallPrefab, BinMapper mapper) {
-        if (group == BinMapper.NoGroup) {
+        // if (group == BinMapper.NoGroup) {
+        //     return null;
+        // }
+        if (group == -1) {
             return null;
         }
 

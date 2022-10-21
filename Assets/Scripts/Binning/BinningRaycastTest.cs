@@ -26,6 +26,7 @@ public class BinningRaycastTest : MonoBehaviour {
     /// easily tested by dragging and dropping.
     /// </summary>
     private DoubleTeeBinMapper mapper = null;
+    private BinWall binWall = null;
 
     private void Awake() {
         // this script should only run in development/editor mode
@@ -51,7 +52,7 @@ public class BinningRaycastTest : MonoBehaviour {
         gazes[0] = gazepoint;
 
         BinWallManager.ResetWalls();
-        BinWallManager.IdentifyObjects(gazes, c, binWallPrefab, mapper);
-        BinWallManager.ViewBinGazes(gazes, c, binWallPrefab, mapper);
+        BinWallManager.IdentifyObjects(gazes, c, binWallPrefab);
+        BinWallManager.ViewBinGazes(gazes, c, binWallPrefab);
     }
 }

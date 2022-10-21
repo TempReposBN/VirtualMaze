@@ -333,15 +333,23 @@ public class DataViewer : BasicGUIController, CueController.ITriggerActions {
 
     private void SelectTrial(int trialNum) {
         pool.ClearScreen();
-        Trial t = trials[trialNum];
-        scrubber.maxValue = t.GetFrameCount() - 1;
-        FrameIndex = 0;
+        Trial t = null;
+        bool isNullOrEmpty = trials.Count == 0;
+        Debug.Assert(isNullOrEmpty == true, "trials is empty!!!");
+        if (trials.Count > 0)
+        {
+            t = trials[trialNum];
 
-        recordCanvas.TrialNum = $"Trial: {_trialIndex + 1}";
+            scrubber.maxValue = t.GetFrameCount() - 1;
+            FrameIndex = 0;
 
-        if (rewards != null) {
-            print($"{t.RewardIndex}, {rewards.Length}");
-            cueController.SetTargetImage(rewards[t.RewardIndex].cueImage);
+            recordCanvas.TrialNum = $"Trial: {_trialIndex + 1}";
+
+            if (rewards != null)
+            {
+                print($"{t.RewardIndex}, {rewards.Length}");
+                cueController.SetTargetImage(rewards[t.RewardIndex].cueImage);
+            }
         }
     }
 
@@ -378,6 +386,7 @@ public class DataViewer : BasicGUIController, CueController.ITriggerActions {
     List<Vector2> frameGazeCache = new List<Vector2>();
 
     DoubleTeeBinMapper m = new DoubleTeeBinMapper(40);
+    BinWall binWall = null;
 
     public void ShowFrame(Trial trial, int frameNum) {
         BinWallManager.ResetWalls();
@@ -408,7 +417,7 @@ public class DataViewer : BasicGUIController, CueController.ITriggerActions {
             i.color = Color.red;
         }
 
-        BinWallManager.DisplayGazes(frameGazeCache, subjectView, binWallPrefab, m);
+        BinWallManager.DisplayGazes(frameGazeCache, subjectView, binWallPrefab);
 
         SimulateFade();
         CueController.ProcessTrigger(trial.GetLatestTriggerAtFrame(frameNum), cueController, this);

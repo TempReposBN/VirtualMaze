@@ -24,6 +24,12 @@ public class RaycastDataLoader : ICsvLineParser<PlaybackData> {
                     initTime = data.timestamp;
                 }
 
+                /*if (data is PlaybackEvent ev)
+                {
+                    Debug.Log($"time:{data.timestamp}");
+                    Debug.Log($"event:{ev.trigger}");
+                }*/
+
                 if (data is PlaybackEvent ev && ev.trigger == SessionTrigger.TrialStartedTrigger) {
                     t = new Trial(ev.message);
                     trials.Add(t);
@@ -52,8 +58,15 @@ public class RaycastDataLoader : ICsvLineParser<PlaybackData> {
                         t.NextFrame(GetRobotConfig(prevRawData));
                     }
                 }
-
-                t.AddData(data);
+                
+                try 
+                {
+                    t.AddData(data);
+                } catch (NullReferenceException)
+                {
+                    continue;
+                }
+                
             }
         }
     }

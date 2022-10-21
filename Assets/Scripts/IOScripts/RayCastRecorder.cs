@@ -33,8 +33,13 @@ public class RayCastRecorder : IDisposable {
     public RayCastRecorder(string saveLocation) : this(saveLocation, "defaultTest.csv") {
     }
 
-    public RayCastRecorder(string saveLocation, string fileName) {
-        s = new StreamWriter(Path.Combine(saveLocation, fileName));
+    public RayCastRecorder(string saveLocation, string fileName) => s = new StreamWriter(Path.Combine(saveLocation, fileName));
+
+    public void WriteHeader()
+    {
+        s.Write("type,time,objHit,rawGaze,robotPos,robotRotY,rayCastHitLoc,objHitPos,centerOffset");
+        s.WriteLine();
+        s.Flush();
     }
 
     public void WriteSample(DataTypes type,

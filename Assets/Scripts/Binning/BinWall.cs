@@ -13,7 +13,7 @@ public class BinWall : MonoBehaviour {
     [SerializeField]
     public int group { get; private set; }
 
-    private List<Bin> binList = new List<Bin>();
+    public List<Bin> binList = new List<Bin>();
     public HashSet<Bin> binsHit = new HashSet<Bin>();
 
     public static HashSet<BinWall> WallsHit = new HashSet<BinWall>();
@@ -30,7 +30,7 @@ public class BinWall : MonoBehaviour {
 
     private void Start() {
         //3/5
-        //CreateWall(3f / 5f, 25 / 40f, 3f, 5);
+        CreateWall(3f / 5f, 25 / 40f, 3f, 5);
     }
 
     public void CreateWall(BinWallConfig config) {
@@ -79,6 +79,10 @@ public class BinWall : MonoBehaviour {
                 binList.Add(b);
             }
         }
+        /*foreach (var bin in binList)
+        {
+            print($"bin:{bin.parent}");
+        }*/
     }
 
     //moves wall to collider

@@ -39,42 +39,43 @@ public class EyeMatReader : EyeDataReader {
             currentTime--;
         }
         else {
+            //if (currentTime < file.timestamps.Length/2) {
+                currentTime++;
 
-            currentTime++;
+                if (currentTime >= stateTime) {
+                    stateIndex++;
 
-            if (currentTime >= stateTime) {
-                stateIndex++;
+                    if (stateIndex < file.trial_index.GetLength(1) * 3 - 1) {
+                        stateTime = GetStateTime(stateIndex + 1);
+                    }
+                    else {
+                        stateTime = float.MaxValue;
+                    }
 
-                if (stateIndex < file.trial_index.GetLength(1) * 3 - 1) {
-                    stateTime = GetStateTime(stateIndex + 1);
+                    currentData = new MessageEvent(file.timestamps[0, currentTime], parseTrialCode(GetStateCode(stateIndex)), DataTypes.MESSAGEEVENT);
+
+                    //undo the increment of index to simulate a message event within the data
+                    currentTime--;
                 }
                 else {
-                    stateTime = float.MaxValue;
+                    if (currentTime >= lastTriggerTime) {
+                        currentData = new FEvent(1, DataTypes.NO_PENDING_ITEMS);
+                    }
+                    else {
+                         float gx = file.eyePos[0, currentTime];
+                         float gy = file.eyePos[1, currentTime];
+                         //if (float.IsNaN(gx)) {
+                         //    gx = 100_000_000f;
+                         //}
+
+                         //if (float.IsNaN(gy)) {
+                         //    gy = 100_000_000f;
+                         //}
+
+                         currentData = new Fsample(file.timestamps[0, currentTime], gx, gy, DataTypes.SAMPLE_TYPE);
+                    }
                 }
-
-                currentData = new MessageEvent(file.timestamps[0, currentTime], parseTrialCode(GetStateCode(stateIndex)), DataTypes.MESSAGEEVENT);
-
-                //undo the increment of index to simulate a message event within the data
-                currentTime--;
-            }
-            else {
-                if (currentTime >= lastTriggerTime) {
-                    currentData = new FEvent(1, DataTypes.NO_PENDING_ITEMS);
-                }
-                else {
-                    float gx = file.eyePos[0, currentTime];
-                    float gy = file.eyePos[1, currentTime];
-                    //if (float.IsNaN(gx)) {
-                    //    gx = 100_000_000f;
-                    //}
-
-                    //if (float.IsNaN(gy)) {
-                    //    gy = 100_000_000f;
-                    //}
-
-                    currentData = new Fsample(file.timestamps[0, currentTime], gx, gy, DataTypes.SAMPLE_TYPE);
-                }
-            }
+            //}
         }
         return currentData;
     }
@@ -89,18 +90,24 @@ public class EyeMatReader : EyeDataReader {
     }
 
     private string parseTrialCode(int code) {
-        Debug.Log(code);
+        //Debug.Log(code);
         SessionTrigger trigger = (SessionTrigger)(code - (code % 10));
+        //Debug.Log(trigger);
         switch (trigger) {
             case SessionTrigger.CueOffsetTrigger:
+                //Debug.Log($"Cue Offset {code}");
                 return $"Cue Offset {code}";
             case SessionTrigger.TrialStartedTrigger:
+                //Debug.Log($"Start Trial {code}");
                 return $"Start Trial {code}";
             case SessionTrigger.TrialEndedTrigger:
+               // Debug.Log($"End Trial {code}");
                 return $"End Trial {code}";
             case SessionTrigger.TimeoutTrigger:
+               // Debug.Log($"Timeout {code}");
                 return $"Timeout {code}";
             case SessionTrigger.ExperimentVersionTrigger:
+                //Debug.Log($"Trigger Version {(int)trigger + GameController.versionNum}");
                 return $"Trigger Version {(int)trigger + GameController.versionNum}";
             default:
                 throw new NotSupportedException($"EyeMatReader::Unknown code {code}");

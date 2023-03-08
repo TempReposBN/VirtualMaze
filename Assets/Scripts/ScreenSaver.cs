@@ -144,9 +144,10 @@ public class ScreenSaver : BasicGUIController {
             return;
         }
 
-        BinMapper mapper = new DoubleTeeBinMapper(numberOfLengthBins);
+        //BinMapper mapper = new MD2BinMapper(numberOfLengthBins);
         BinWallManager.ReconfigureGazeOffsetCache(gazeRadius, density);
-        StartCoroutine(ProcessSessionDataTask(sessionInput.text, eyeLinkFileInput.text, folderInput.text, mapper));
+        //StartCoroutine(ProcessSessionDataTask(sessionInput.text, eyeLinkFileInput.text, folderInput.text, mapper));
+        StartCoroutine(ProcessSessionDataTask(sessionInput.text, eyeLinkFileInput.text, folderInput.text));
     }
 
 
@@ -212,7 +213,7 @@ public class ScreenSaver : BasicGUIController {
         }
     }
 
-    public IEnumerator ProcessSessionDataTask(string sessionPath, string edfPath, string toFolderPath, BinMapper mapper) {
+    public IEnumerator ProcessSessionDataTask(string sessionPath, string edfPath, string toFolderPath) {
         /* Setup */
         H5.close();
         H5.open();
@@ -254,14 +255,15 @@ public class ScreenSaver : BasicGUIController {
         string filename = $"{Path.GetFileNameWithoutExtension(sessionPath)}_{Path.GetFileNameWithoutExtension(edfPath)}.csv";
 
         DateTime start = DateTime.Now;
-        Debug.LogError($"s: {start}");
+        //Debug.LogError($"s: {start}");
 
         using (BinRecorder bRec = new BinRecorder(toFolderPath))
         using (RayCastRecorder recorder = new RayCastRecorder(toFolderPath, filename)) {
-            yield return ProcessSession(sessionReader, eyeReader, recorder, bRec, mapper);
+            yield return ProcessSession(sessionReader, eyeReader, recorder, bRec);
         }
+
         Console.Write($"s: {start}, e: {DateTime.Now}");
-        Debug.LogError($"s: {start}, e: {DateTime.Now}");
+        //Debug.LogError($"s: {start}, e: {DateTime.Now}");
 
         /* Clean up */
         //SceneManager.LoadScene("Start");
@@ -284,6 +286,11 @@ public class ScreenSaver : BasicGUIController {
         Profiler.BeginSample("Enqueue");
         decimal sessionEventPeriod = LoadToNextTriggerSession(sessionReader, sessionFrames, out SessionData sessionData);
         uint edfEventPeriod = LoadToNextTriggerEdf(eyeReader, fixations, out MessageEvent edfdata, out SessionTrigger edfTrigger);
+
+        //Debug.Log($"edf Event Period is {edfEventPeriod}");
+        //Debug.Log($"Session Event Period is {sessionEventPeriod}");
+        Debug.Log($"edf Trigger is {edfTrigger}");
+        Debug.Log($"Session Trigger is {sessionData.trigger}");
 
         if (sessionData.trigger != edfTrigger) {
             throw new Exception("Unaligned session and eyedata! Are there missing triggers in eyelink or Unity data?");
@@ -323,7 +330,7 @@ public class ScreenSaver : BasicGUIController {
         }
     }
 
-    private IEnumerator ProcessSession(ISessionDataReader sessionReader, EyeDataReader eyeReader, RayCastRecorder recorder, BinRecorder binRecorder, BinMapper mapper) {
+    private IEnumerator ProcessSession(ISessionDataReader sessionReader, EyeDataReader eyeReader, RayCastRecorder recorder, BinRecorder binRecorder) {
         int frameCounter = 0;
         int trialCounter = 1;
 
@@ -333,6 +340,7 @@ public class ScreenSaver : BasicGUIController {
 
         //Move to first Trial Trigger
         AllFloatData data = PrepareFiles(sessionReader, eyeReader, SessionTrigger.TrialStartedTrigger);
+ 
 
         Queue<SessionData> sessionFrames = new Queue<SessionData>();
         Queue<AllFloatData> fixations = new Queue<AllFloatData>();
@@ -419,7 +427,8 @@ public class ScreenSaver : BasicGUIController {
 
                 /* Start the binning process while rCastJob is running */
                 Profiler.BeginSample("Binning");
-                BinGazes(binSamples, binRecorder, jobQueue, mapper);
+                //BinGazes(binSamples, binRecorder, jobQueue, mapper);
+                BinGazes(binSamples, binRecorder, jobQueue);
                 Profiler.EndSample();
 
                 Profiler.BeginSample("RaycastingSingleProcess");
@@ -439,7 +448,7 @@ public class ScreenSaver : BasicGUIController {
                         }
                         job.h.Complete();
 
-                        job.process(mapper, binsHitId);
+                        job.process(binsHitId);
 
                         Profiler.BeginSample("HDFwrite");
                         binRecorder.RecordMovement(job.sampleTime, binsHitId);
@@ -494,7 +503,7 @@ public class ScreenSaver : BasicGUIController {
             }
         }
 
-        Debug.LogError(debugMaxMissedOffset);
+        //Debug.LogError(debugMaxMissedOffset);
 
     }
 
@@ -516,6 +525,7 @@ public class ScreenSaver : BasicGUIController {
         public void Process(AllFloatData currData, RayCastRecorder recorder, Transform robot, bool isLastSampleInFrame, GazePointPool gazePointPool, bool displayGazes, RectTransform GazeCanvas, Camera viewport) {
             int lastGazeIndex = numSamples - 2;
             Image img = null;
+            //recorder.WriteHeader();
             for (int i = 0; i < numSamples; i++) {
                 if (i == lastGazeIndex && currData is MessageEvent) {
                     recorder.FlagEvent(((MessageEvent)currData).message);
@@ -622,7 +632,7 @@ public class ScreenSaver : BasicGUIController {
     private float minGaze = float.PositiveInfinity;
     private float maxGaze = float.NegativeInfinity;
 
-    private void BinGazes(List<Fsample> sampleCache, BinRecorder recorder, Queue<BinWallManager.BinGazeJobData> jobQueue, BinMapper mapper) {
+    private void BinGazes(List<Fsample> sampleCache, BinRecorder recorder, Queue<BinWallManager.BinGazeJobData> jobQueue) {
         List<Vector2> gazeCache = new List<Vector2>();
 
         Vector2 prev = Vector2.negativeInfinity;
@@ -640,7 +650,7 @@ public class ScreenSaver : BasicGUIController {
 
         Profiler.BeginSample("Identify Obj");
 
-        float maxSqDist = BinWallManager.IdentifyObjects(gazeCache, viewport, binWallPrefab, mapper);
+        float maxSqDist = BinWallManager.IdentifyObjects(gazeCache, viewport, binWallPrefab);
         if (maxSqDist > -1) {
             minGaze = Mathf.Min(minGaze, maxSqDist);
         }
@@ -650,7 +660,7 @@ public class ScreenSaver : BasicGUIController {
 
         Profiler.BeginSample("RaycastAndSave");
 
-        int modder = Mathf.FloorToInt(BinWallManager.secondaryOffset.Count / Mathf.Lerp(BinWallManager.secondaryOffset.Count * 0.50f, BinWallManager.secondaryOffset.Count, maxSqDist / (mapper.MaxPossibleSqDistance())));
+        int modder = Mathf.FloorToInt(BinWallManager.secondaryOffset.Count / Mathf.Lerp(BinWallManager.secondaryOffset.Count * 0.50f, BinWallManager.secondaryOffset.Count, maxSqDist / (25f*25f)));
 
         JobHandle latestHandle = default;
 
@@ -730,7 +740,7 @@ public class ScreenSaver : BasicGUIController {
     /// <param name="relativePos">Local 2D offset of from the center of the object gazed</param>
     /// <param name="objHitPos">World position of the object in the scene</param>
     /// <param name="gazePoint">World position of the point where the gaze fixates the object</param>
-    /// <returns>True if an object was in the path of the gaze</returns>
+    /// <returns>True if an object was in the path of the gaze</returns>        
     private bool RaycastToScene(Vector3 gazeData,
                                  out string objName,
                                  out Vector2 relativePos,
@@ -846,6 +856,7 @@ public class ScreenSaver : BasicGUIController {
         //move edfFile to point to first trial
         bool foundNextTrigger = false;
         while (!foundNextTrigger) {
+            Debug.Log($"edfData:{eyeReader.GetNextData()}");
             data = eyeReader.GetNextData();
 
             if (data.dataType == DataTypes.MESSAGEEVENT) {
@@ -883,6 +894,7 @@ public class ScreenSaver : BasicGUIController {
         // Conditon evaluation is Left to Right and it short circuits.
         // Please do not change the order of this if conditon.
         while (!isNextEventFound && reader.Next()) {
+            Debug.Log($"nextData:{reader.CurrentData}");
             data = reader.CurrentData;
             frames.Enqueue(data);
 
@@ -890,7 +902,6 @@ public class ScreenSaver : BasicGUIController {
 
             isNextEventFound = data.trigger != SessionTrigger.NoTrigger;
         }
-
         return totalTime;
     }
 
@@ -921,6 +932,7 @@ public class ScreenSaver : BasicGUIController {
                 isNextEventFound = true;
                 MessageEvent ev = (MessageEvent)data;
                 latest = ev;
+                Debug.Log($"Next Data is {ev.trigger}");
                 edfTrigger = ev.trigger;
                 return ev.time - fixations.Peek().time;
             }
@@ -950,7 +962,6 @@ public class ScreenSaver : BasicGUIController {
         tex.Apply();
         byte[] bytes = tex.EncodeToPNG();
         Destroy(tex);
-
         File.WriteAllBytes(filename, bytes);
     }
 }

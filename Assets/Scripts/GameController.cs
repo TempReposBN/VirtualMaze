@@ -191,7 +191,8 @@ public class GameController : MonoBehaviour {
             path = sessions.Dequeue();
             logger.Print($"Starting({count}/{total}): {path}");
 
-            StartCoroutine(ProcessWrapper(path + unityfileMatFile, path + eyelinkMatFile, path, mapper));
+            StartCoroutine(ProcessWrapper(path + unityfileMatFile, path + eyelinkMatFile, path));
+            //StartCoroutine(ProcessWrapper(path + unityfileMatFile, path + eyelinkMatFile, path, mapper));
             while (!generationComplete) {
                 await Task.Delay(10000); //10 second notify-alive message
 
@@ -224,14 +225,15 @@ public class GameController : MonoBehaviour {
         return Regex.IsMatch(dirInfo.Name, SessionPattern);
     }
 
-    private IEnumerator ProcessWrapper(string sessionPath, string edfPath, string toFolderPath, BinMapper mapper) {
+    private IEnumerator ProcessWrapper(string sessionPath, string edfPath, string toFolderPath) {
         print($"session: {sessionPath}");
         print($"edf: {edfPath}");
         print($"toFolder: {toFolderPath}");
 
         generationComplete = false;
         try {
-            yield return saver.ProcessSessionDataTask(sessionPath, edfPath, toFolderPath, mapper);
+            yield return saver.ProcessSessionDataTask(sessionPath, edfPath, toFolderPath);
+            //yield return saver.ProcessSessionDataTask(sessionPath, edfPath, toFolderPath, mapper);
         }
         finally { //so that the batchmode app will quit or move on the the next session
             generationComplete = true;

@@ -7,22 +7,35 @@ import random
 def control_Panel():
     global controlPanel
     controlPanel = tk.Tk()
-    controlPanel.geometry("300x400")
+    controlPanel.geometry("300x500")
     controlPanel.title("Button Control Panel")
+    
+    global gameWindowOpened
+    gameWindowOpened = False
 
     # Create an Start Game Window button
     def openGame():
-        global gameSettings
+        global gameSettings, gameWindowOpened, gameWindow
         gameSettings = createGameSettings()
         print(gameSettings)
-        global gameWindow
-        gameWindow = createGameWindow()
+        if not gameWindowOpened:
+            gameWindow = createGameWindow()
+            gameWindowOpened = True
+            gameWindow.protocol("WM_DELETE_WINDOW", on_game_window_closed)
+        else:
+            open_popup("Game Window is already running.", 
+                       "The game window is already running, please close the previous game window.")
         
     # Create Label and Entry
     durationLabel = tk.Label(controlPanel, text="Color Change Duration (ms):")
     durationLabel.pack()
     durationEntry = tk.Entry(controlPanel)
     durationEntry.pack()
+
+    intermissionLabel = tk.Label(controlPanel, text="Intermission Duration (ms):")
+    intermissionLabel.pack()
+    intermissionEntry = tk.Entry(controlPanel)
+    intermissionEntry.pack()
 
     posXLabel = tk.Label(controlPanel, text="X Position of Circle (pixels):")
     posXLabel.pack()
@@ -65,7 +78,9 @@ def control_Panel():
         global gameSettings
         global canvas
         if durationEntry.get() != '':
-            gameSettings["Duration"] = int(durationEntry.get())
+            gameSettings["duration"] = int(durationEntry.get())
+        if intermissionEntry.get() != '':
+            gameSettings["intermissionTime"] = int(intermissionEntry.get())
 
         try:
             canvas.delete(circle)
@@ -88,9 +103,17 @@ def control_Panel():
     applyButton = tk.Button(controlPanel, text="Apply", command=applySettings)
     applyButton.pack()
 
+    def on_game_window_closed():
+        resetButton.destroy()
+        gameWindow.destroy()
+        global gameWindowOpened
+        gameWindowOpened = False
+
+
     # Creating Exit button
     def exitGame():
         try:
+            global gameWindow
             gameWindow.destroy()
         finally:
             controlPanel.destroy()
@@ -99,14 +122,14 @@ def control_Panel():
     exitButton.pack()
 
     # Error Prompt function. could be moved to another script if needed
-    def open_popup(prompt):
+    def open_popup(title, reason):
         popup_window = tk.Toplevel(controlPanel)
-        popup_window.title("Popup")
-        popup_window.geometry("200x100")
-        popup_window.protocol("WM_DELETE_WINDOW", self.on_popup_close)
+        popup_window.title(title)
+        popup_window.geometry("500x100")
+        # popup_window.protocol("WM_DELETE_WINDOW", popup_window.on_popup_close)
 
         # Content of the popup window
-        popup_label = tk.Label(popup_window, text="This is a popup window!")
+        popup_label = tk.Label(popup_window, text=reason)
         popup_label.pack()
 
 
@@ -177,10 +200,14 @@ def createGameWindow():
             # Only can use WAV files            
 
     def reset_color():
-        if gameSettings["randMoveCircleCheckBox"] == 1:
+        if gameSettings["intermissionTime"] != 0:
             canvas.delete(circle)
             canvas.delete(outer_ring)
-            randDrawCircle()
+            if gameSettings["randMoveCircleCheckBox"] == 1:
+                gameWindow.after(gameSettings["intermissionTime"], randDrawCircle)
+            else:
+                gameWindow.after(gameSettings["intermissionTime"], 
+                                 lambda: drawCircle(gameSettings["posX"], gameSettings["posY"], gameSettings["circleSize"]))
         else:
             canvas.itemconfig(circle, fill="#990000")
        
@@ -193,8 +220,9 @@ def createGameWindow():
             
             if gameSettings["duraCheckBox"] == 0:
                 # Reset color after 3 seconds
-                gameWindow.after(gameSettings["Duration"], reset_color)
+                gameWindow.after(gameSettings["duration"], reset_color)
 
+    global resetButton
     resetButton = tk.Button(controlPanel, text="Reset Button", command=reset_color)
     resetButton.pack()
     
@@ -208,13 +236,14 @@ def createGameWindow():
 def createGameSettings():
     # Initialising Settings Dictionary
     gameSettings = {
-        "Duration" : 3000, # Default 3000ms
+        "duration" : 3000, # Default 3000ms
         "posX" : 800,
         "posY" : 450,
         "circleSize" : 200,
         "duraCheckBox" : 0,
         "soundCheckBox" : 1,
-        "randMoveCircleCheckBox" : 0
+        "randMoveCircleCheckBox" : 0,
+        "intermissionTime" : 0
     }
     return gameSettings
 
@@ -224,6 +253,4 @@ def createGameSettings():
 
 ##Main Loop##
 control_Panel()
-
-
-
+controlPanel.mainloop()

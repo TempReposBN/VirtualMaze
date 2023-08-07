@@ -11,7 +11,7 @@ public class InputRewardNo : MonoBehaviour
     void Start()
     {
         var input = gameObject.GetComponent<InputField>();
-        var se = new InputField.SubmitEvent();
+        var se = new InputField.EndEditEvent();
         se.AddListener(SubmitName);
         input.onEndEdit = se;
     }
